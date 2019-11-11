@@ -5,6 +5,7 @@ from .forms import UploadFileForm
 from scipy.io import wavfile
 
 from backend.controllers import pcpcontroller
+from backend import models
 
 
 class Home(View):
@@ -48,5 +49,5 @@ class Home(View):
                     results.append((second, chord, True))
                 else:
                     results.append((second, chord, False))
-            pcp_extractor.save_plot_wave_with_results(results)
-
+            new_pcp = pcp_extractor.save_plot_wave_with_results(results)
+            return render(request, 'templates/home/view_pcp.html', {'img': new_pcp.path})

@@ -1,11 +1,12 @@
 from django.db import models
 import uuid
+import os
 
 
 def get_default_filename():
-    return 'chords_' + str(uuid.uuid1()).split('-')[0] + '.png'
+    return os.path.join('img/pcp', 'chords_' + str(uuid.uuid1()).split('-')[0] + '.png')
 
 
 class PCPFile(models.Model):
-    filename = models.CharField(max_length=255, default=get_default_filename)
+    path = models.CharField(max_length=255, default=get_default_filename)
     deleted = models.BooleanField(default=False)

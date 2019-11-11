@@ -8,7 +8,9 @@ from skimage.feature import peak_local_max
 from numpy import fft
 import matplotlib.collections as collections
 import librosa
-import uuid
+
+from backend import models
+from chord_recognition.settings import PCP_IMAGES_ROOT
 
 
 ground_truth = [
@@ -222,7 +224,9 @@ class PCPExtractor:
                 ax.text(coord + x_offset, 0, chord,
                         rotation='vertical', bbox=bbox, fontsize=7)
             current_y_idx = (current_y_idx + 1) % 2
-        fig.savefig('temp.png', dpi=fig.dpi)
+        new_pcp = models.PCPFile.objects.create()
+        fig.savefig('src/static/'+new_pcp.path, dpi=fig.dpi)
+        return new_pcp
 
 
     def get_single_chord(self, delay=None, window_size=None):
