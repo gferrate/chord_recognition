@@ -1,6 +1,7 @@
 from django.db import models
 import uuid
 import os
+from chord_recognition.settings import PCP_IMAGES_ROOT
 
 
 def get_default_filename():
@@ -9,4 +10,11 @@ def get_default_filename():
 
 class PCPFile(models.Model):
     path = models.CharField(max_length=255, default=get_default_filename)
-    deleted = models.BooleanField(default=False)
+    #deleted = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f'path: {self.path} - deleted: {self.deleted}'
+
+    def delete(self):
+        os.remove(os.path.join(PCP_IMAGES_ROOT,self.path))
+        super().delete()
