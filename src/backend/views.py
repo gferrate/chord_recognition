@@ -22,6 +22,7 @@ class Home(View):
         if form.is_valid():
             new_pcp = pcpcontroller.extract_chords_from_audiofile(request.FILES['file'])
             return redirect('view_pcp', path=new_pcp.path)
+        return render(request, 'templates/home/index.html', {'form': form})
 
 
 class ViewPCP(View):

@@ -6,11 +6,27 @@
         <div class="container">
             <h1 class="masthead-heading mb-0">The chord recognition webpage</h1>
             <h2 class="masthead-subheading mb-0">Upload a wav file and we'll find the chords</h2>
+            <div class="d-flex justify-content-lg-center mt-3">
+                {% if form.errors %}
+                    {% for field in form %}
+                        {% for error in field.errors %}
+                            <div class="alert alert-danger">
+                                <strong>{{ error|escape }}</strong>
+                            </div>
+                        {% endfor %}
+                    {% endfor %}
+                    {% for error in form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            <strong>{{ error|escape }}</strong>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
             <form id="file-form" action="{{ request.path }}" method="post" enctype="multipart/form-data">
                 {% csrf_token %}
                 <div style="display: none">{{form}}
-                    <input class="btn btn-primary btn-xl rounded-pill mt-5" type="submit" value="Upload file"></div>
-                <label for="{{ form.file.auto_id }}" class="btn btn-primary btn-xl rounded-pill mt-5 label-clickable"
+                    <input class="btn btn-primary btn-xl rounded-pill" type="submit" value="Upload file"></div>
+                <label for="{{ form.file.auto_id }}" class="btn btn-primary btn-xl rounded-pill label-clickable"
                     value="Upload file">Upload File</label>
             </form>
         </div>

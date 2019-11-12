@@ -13,7 +13,7 @@ from backend import models
 from chord_recognition.settings import PCP_IMAGES_ROOT
 
 
-ground_truth = [
+song_1_ground_truth = [
     ('La# Maj', 0, 2),
     ('Sol Maj', 2, 4),
     ('Re# Maj', 4, 8),
@@ -213,16 +213,22 @@ class PCPExtractor:
         x_offset = 0
         for second, chord, is_ok in results:
             coord = second * self.fs
-            if is_ok:
+            if is_ok == True:
                 plot.axvline(x=coord, color='g')
                 bbox={'facecolor': 'green', 'alpha': 0.5, 'pad': 1}
                 ax.text(coord + x_offset, 0, chord,
                         rotation='vertical', bbox=bbox, fontsize=7)
-            else:
+            elif is_ok == False:
                 plot.axvline(x=coord, color='r')
                 bbox={'facecolor': 'red', 'alpha': 0.5, 'pad': 1}
                 ax.text(coord + x_offset, 0, chord,
                         rotation='vertical', bbox=bbox, fontsize=7)
+            elif is_ok == 'no_ground_truth':
+                plot.axvline(x=coord, color='grey')
+                bbox={'facecolor': 'grey', 'alpha': 0.5, 'pad': 1}
+                ax.text(coord + x_offset, 0, chord,
+                        rotation='vertical', bbox=bbox, fontsize=7)
+
             current_y_idx = (current_y_idx + 1) % 2
         new_pcp = models.PCPFile.objects.create()
         fig.savefig(os.path.join(PCP_IMAGES_ROOT,new_pcp.path), dpi=fig.dpi)
@@ -242,10 +248,8 @@ class PCPExtractor:
         return self.matching_chord
 
 
-def extract_chords_from_audiofile(file):
-    pcp_extractor = PCPExtractor(
-        file=file, window_size=1024*5
-    )
+def extract_chords_from_audiofile(file, ground_truth=None):
+    pcp_extractor = PCPExtractor(file=file, window_size=1024*5)
     pcp_extractor.read_file()
     delta = pcp_extractor.get_tempo()
     chords = []
@@ -260,19 +264,22 @@ def extract_chords_from_audiofile(file):
                 pass
             second = delay / pcp_extractor.fs
             chords.append((round(second, 1), chord))
-    results = []
-    MARGIN = 0.5
-    for second, chord in chords:
-        is_ok = False
-        for good_chord, sec_from, sec_to in ground_truth:
-            if ((second >= (sec_from - MARGIN)) and
-                (second <= (sec_to + MARGIN)) and
-                    (chord == good_chord)):
-                is_ok = True
-                break
-        if is_ok:
-            results.append((second, chord, True))
-        else:
-            results.append((second, chord, False))
+    if ground_truth:
+        results = []
+        MARGIN = 0.5
+        for second, chord in chords:
+            is_ok = False
+            for good_chord, sec_from, sec_to in ground_truth:
+                if ((second >= (sec_from - MARGIN)) and
+                    (second <= (sec_to + MARGIN)) and
+                        (chord == good_chord)):
+                    is_ok = True
+                    break
+            if is_ok:
+                results.append((second, chord, True))
+            else:
+                results.append((second, chord, False))
+    else:
+        results = [c + ('no_ground_truth',) for c in chords]
 
     return pcp_extractor.save_plot_wave_with_results(results)
