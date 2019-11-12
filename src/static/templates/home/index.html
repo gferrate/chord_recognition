@@ -56,9 +56,12 @@
             <div class="container">
                 <h1 class="masthead-heading mb-0">The chord recognition webpage</h1>
                 <h2 class="masthead-subheading mb-0">Upload a wav file and we'll find the chords</h2>
-                <form action="{{ request.path }}" method="post" enctype="multipart/form-data">
-                    {% csrf_token %} {{form}}
-                    <input class="btn btn-primary btn-xl rounded-pill mt-5" type="submit" value="Upload file">
+                <form id="file-form" action="{{ request.path }}" method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div style="display: none">{{form}}
+                    <input class="btn btn-primary btn-xl rounded-pill mt-5" type="submit" value="Upload file"></div>
+                    <label for="{{ form.file.auto_id }}" class="btn btn-primary btn-xl rounded-pill mt-5 label-clickable"
+                        value="Upload file">Upload File</label>
                 </form>
             </div>
         </div>
@@ -145,6 +148,13 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
         integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
         crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
+        integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
+        crossorigin="anonymous"></script>
+
+
+    <!-- Custom JS -->
+    <script src="static/js/script.js"></script>
 
 
 </body>

@@ -12,7 +12,8 @@ h6 {
     font-weight: 800 !important;
 }
 
-.input-hidden {
+.label-clickable {
+    cursor: pointer;
 }
 
 .btn-xl {
