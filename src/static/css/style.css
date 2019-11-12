@@ -1,5 +1,6 @@
 body {
-    font-family: 'Lato';
+    //font-family: 'Lato';
+    font-family: 'Varela Round', sans-serif;
 }
 
 h1,
@@ -8,8 +9,16 @@ h3,
 h4,
 h5,
 h6 {
-    font-family: 'Catamaran';
+    //font-family: 'Catamaran';
+    font-family: 'Varela Round', sans-serif;
     font-weight: 800 !important;
+}
+
+h1 {
+    font-size: 70px !important;
+}
+h2 {
+    font-size: 45px !important;
 }
 
 .label-clickable {
@@ -57,7 +66,7 @@ header.masthead {
     overflow: hidden;
     padding-top: calc(7rem + 72px);
     padding-bottom: 7rem;
-    background: linear-gradient(0deg, #ff6a00 0%, #ee0979 100%);
+    background: linear-gradient(0deg, #2176AE 0%, #25CED1 100%);
     background-repeat: no-repeat;
     background-position: center center;
     background-attachment: scroll;
@@ -81,7 +90,7 @@ header.masthead .bg-circle {
     z-index: 0;
     position: absolute;
     border-radius: 100%;
-    background: linear-gradient(0deg, #ee0979 0%, #ff6a00 100%);
+    background: linear-gradient(0deg, #2176AE 0%, #51FFED 100%);
 }
 
 header.masthead .bg-circle-1 {
@@ -126,19 +135,19 @@ header.masthead .bg-circle-4 {
 }
 
 .bg-primary {
-    background-color: #ee0979 !important;
+    background-color: #49B3FF !important;
 }
 
 .btn-primary {
-    background-color: #ee0979;
-    border-color: #ee0979;
+    background-color: #49B3FF;
+    border-color: #49B3FF;
 }
 
 .btn-primary:active,
 .btn-primary:focus,
 .btn-primary:hover {
-    background-color: #bd0760 !important;
-    border-color: #bd0760 !important;
+    background-color: #2176AE !important;
+    border-color: #2176AE !important;
 }
 
 .btn-primary:focus {

@@ -117,7 +117,8 @@ STATICFILES_DIRS = [
     '/var/www/static/',
 ]
 
-PCP_IMAGES_ROOT = os.path.join(BASE_DIR, "static")
+PCP_PARTAL_PATH = 'img/pcp/'
+PCP_IMAGES_ROOT = os.path.join(BASE_DIR, "static", PCP_PARTAL_PATH)
 
 SHELL_PLUS = "ipython"
 

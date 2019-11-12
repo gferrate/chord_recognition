@@ -4,9 +4,11 @@
 <header class="masthead text-center text-white">
     <div class="masthead-content">
         <div class="container">
-            <h1 class="masthead-heading mb-0">Result</h1>
+            <h1 class="masthead-heading mb-0">Previous results</h1>
             <div class="text-center">
-                <img src="{% static img %}" alt="Chords" class="rounded img-fluid mx-auto" style="height:auto;width:65%;">
+                {% for img in imgs %}
+                <img src="{% static img %}" alt="Chords" class="rounded img-fluid mx-auto mt-3" style="height:auto;width:65%;">
+                {% endfor %}
             </div>
         </div>
     </div>

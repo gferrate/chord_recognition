@@ -225,7 +225,7 @@ class PCPExtractor:
                         rotation='vertical', bbox=bbox, fontsize=7)
             current_y_idx = (current_y_idx + 1) % 2
         new_pcp = models.PCPFile.objects.create()
-        fig.savefig('src/static/'+new_pcp.path, dpi=fig.dpi)
+        fig.savefig(os.path.join(PCP_IMAGES_ROOT,new_pcp.path), dpi=fig.dpi)
         return new_pcp
 
 
@@ -242,67 +242,37 @@ class PCPExtractor:
         return self.matching_chord
 
 
+def extract_chords_from_audiofile(file):
+    pcp_extractor = PCPExtractor(
+        file=file, window_size=1024*5
+    )
+    pcp_extractor.read_file()
+    delta = pcp_extractor.get_tempo()
+    chords = []
+    for delay in range(0, pcp_extractor.data.size-delta, delta):
+        chord = pcp_extractor.get_single_chord(delay, delta)
+        if chord:
+            try:
+                last_chord = chords[-1][1]
+                if last_chord == chord:
+                    continue
+            except IndexError:
+                pass
+            second = delay / pcp_extractor.fs
+            chords.append((round(second, 1), chord))
+    results = []
+    MARGIN = 0.5
+    for second, chord in chords:
+        is_ok = False
+        for good_chord, sec_from, sec_to in ground_truth:
+            if ((second >= (sec_from - MARGIN)) and
+                (second <= (sec_to + MARGIN)) and
+                    (chord == good_chord)):
+                is_ok = True
+                break
+        if is_ok:
+            results.append((second, chord, True))
+        else:
+            results.append((second, chord, False))
 
-#filenames = [
-#    'domaj#.aif',
-#    'domaj.aif',
-#    'famaj#.aif',
-#    'famaj.aif',
-#    'lamaj#.aif',
-#    'lamaj.aif',
-#    'mimaj.aif',
-#    'remaj#.aif',
-#    'remaj.aif',
-#    'simaj.aif',
-#    'solmaj#.aif',
-#    'solmaj.aif'
-#]
-#
-##pcp_extractor = PCPExtractor(window_size=1024*8, delay=1024, plot_results=False)
-##
-##for filename in filenames:
-##    f = 'Samples/Piano/' + filename
-##    chord = pcp_extractor(f)
-##    print(filename, chord)
-##
-#
-#
-#filename = 'song1v4.wav'
-#pcp_extractor = PCPExtractor(
-#    filename=filename,window_size=1024*5, delay=1024, plot_results=False
-#)
-#
-#pcp_extractor.read_file()
-#delta = pcp_extractor.get_tempo()
-#chords = []
-#for delay in range(0, pcp_extractor.data.size-delta, delta):
-#    chord = pcp_extractor.get_single_chord(delay, delta)
-#    if chord:
-#        try:
-#            last_chord = chords[-1][1]
-#            if last_chord == chord:
-#                continue
-#        except IndexError:
-#            pass
-#        second = delay / pcp_extractor.fs
-#        chords.append((round(second, 1), chord))
-#
-#results = []
-#MARGIN = 0.5
-#for second, chord in chords:
-#    is_ok = False
-#    for good_chord, sec_from, sec_to in ground_truth:
-#        if ((second >= (sec_from - MARGIN)) and
-#            (second <= (sec_to + MARGIN)) and
-#                (chord == good_chord)):
-#            is_ok = True
-#            break
-#    if is_ok:
-#        results.append((second, chord, True))
-#        print('\t'.join([str(second), chord, 'OK']))
-#    else:
-#        results.append((second, chord, False))
-#        print('\t'.join([str(second), chord, 'NO OK']))
-#
-#
-#pcp_extractor.plot_wave_with_results(results)
+    return pcp_extractor.save_plot_wave_with_results(results)

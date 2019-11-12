@@ -1,11 +1,14 @@
 from django.http import HttpResponse
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from django.views.generic import View
 from .forms import UploadFileForm
 from scipy.io import wavfile
+import os
 
 from backend.controllers import pcpcontroller
 from backend import models
+from chord_recognition.settings import PCP_PARTAL_PATH
+from django.shortcuts import redirect
 
 
 class Home(View):
@@ -17,37 +20,21 @@ class Home(View):
     def post(self, request):
         form = UploadFileForm(request.POST, request.FILES)
         if form.is_valid():
-            pcp_extractor = pcpcontroller.PCPExtractor(
-                file=request.FILES['file'],
-                window_size=1024*5
-            )
-            pcp_extractor.read_file()
-            delta = pcp_extractor.get_tempo()
-            chords = []
-            for delay in range(0, pcp_extractor.data.size-delta, delta):
-                chord = pcp_extractor.get_single_chord(delay, delta)
-                if chord:
-                    try:
-                        last_chord = chords[-1][1]
-                        if last_chord == chord:
-                            continue
-                    except IndexError:
-                        pass
-                    second = delay / pcp_extractor.fs
-                    chords.append((round(second, 1), chord))
-            results = []
-            MARGIN = 0.5
-            for second, chord in chords:
-                is_ok = False
-                for good_chord, sec_from, sec_to in pcpcontroller.ground_truth:
-                    if ((second >= (sec_from - MARGIN)) and
-                        (second <= (sec_to + MARGIN)) and
-                            (chord == good_chord)):
-                        is_ok = True
-                        break
-                if is_ok:
-                    results.append((second, chord, True))
-                else:
-                    results.append((second, chord, False))
-            new_pcp = pcp_extractor.save_plot_wave_with_results(results)
-            return render(request, 'templates/home/view_pcp.html', {'img': new_pcp.path})
+            new_pcp = pcpcontroller.extract_chords_from_audiofile(request.FILES['file'])
+            return redirect('view_pcp', path=new_pcp.path)
+
+
+class ViewPCP(View):
+
+    def get(self, request, path):
+        pcp = get_object_or_404(models.PCPFile, path=path)
+        path = os.path.join(PCP_PARTAL_PATH, pcp.path)
+        return render(request, 'templates/home/view_pcp.html', {'img': path})
+
+
+class ViewPreviousResults(View):
+
+    def get(self, request):
+        pcps = models.PCPFile.objects.all().values_list('path', flat=True)
+        paths = [os.path.join(PCP_PARTAL_PATH, p) for p in pcps]
+        return render(request, 'templates/home/view_pcps.html', {'imgs': paths})

@@ -5,7 +5,7 @@ from chord_recognition.settings import PCP_IMAGES_ROOT
 
 
 def get_default_filename():
-    return os.path.join('img/pcp', 'chords_' + str(uuid.uuid1()).split('-')[0] + '.png')
+    return 'chords_' + str(uuid.uuid1()).split('-')[0] + '.png'
 
 
 class PCPFile(models.Model):
@@ -13,8 +13,11 @@ class PCPFile(models.Model):
     #deleted = models.BooleanField(default=False)
 
     def __str__(self):
-        return f'path: {self.path} - deleted: {self.deleted}'
+        return f'path: {self.path}'
 
     def delete(self):
-        os.remove(os.path.join(PCP_IMAGES_ROOT,self.path))
+        os.remove(os.path.join(PCP_IMAGES_ROOT, self.path))
         super().delete()
+
+    def get_full_path():
+        return os.path.join('img/pcp', self.path)
