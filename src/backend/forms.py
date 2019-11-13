@@ -11,5 +11,5 @@ class UploadFileForm(forms.Form):
         _, file_extension = os.path.splitext(data['file'].name)
         if file_extension.lower() != '.wav':
             raise ValidationError("Filetype not allowed")
-        if data['file'].size > 10_000_000:
+        if data['file'].size > 10000000:
             raise ValidationError("Max 10MB")

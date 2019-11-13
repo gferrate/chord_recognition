@@ -27,7 +27,7 @@ class PCPFile(models.Model):
     objects = DeleteFilesManager()
 
     def __str__(self):
-        return f'path: {self.path}'
+        return 'path: {}'.format(self.path)
 
     def delete(self):
         os.remove(os.path.join(PCP_IMAGES_ROOT, self.path))

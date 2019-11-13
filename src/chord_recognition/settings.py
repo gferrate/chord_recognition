@@ -10,10 +10,23 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = '&k5xcjrq)19l+m_2@h-7kd@-2ay9-s9umnazyxab!3)8gw$&oh'
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
 
-ALLOWED_HOSTS = []
+STATIC_URL = '/static/'
+#STATIC_URL = os.path.join(BASE_DIR, 'static/')
+#STATIC_ROOT = os.path.join(BASE_DIR, "static")
+if os.environ.get('DEBUG') == 'False':
+    # WITH DOCKER
+    DEBUG = False
+    STATIC_ROOT = os.path.join(BASE_DIR, "static/")
+else:
+    # WITHOUT DOCKER
+    DEBUG = True
+    STATICFILES_DIRS = [os.path.join(BASE_DIR, "static")]
+
+ALLOWED_HOSTS = [
+    'ec2-54-226-226-35.compute-1.amazonaws.com',
+    '127.0.0.1'
+]
 
 
 # Application definition
@@ -45,7 +58,7 @@ TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
-            os.path.join(BASE_DIR, 'static/'),
+            os.path.join(BASE_DIR, 'templates'),
         ],
         'APP_DIRS': True,
         'OPTIONS': {
@@ -109,13 +122,6 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.2/howto/static-files/
 
-STATIC_URL = '/static/'
-STATIC_ROOT = "/static"
-
-STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, "static"),
-    '/var/www/static/',
-]
 
 PCP_PARTAL_PATH = 'img/pcp/'
 PCP_IMAGES_ROOT = os.path.join(BASE_DIR, "static", PCP_PARTAL_PATH)

@@ -1,14 +1,12 @@
-{% extends 'templates/base.html' %}
+{% extends 'base.html' %}
 {% load static %}
 {% block content %}
 <header class="masthead text-center text-white">
     <div class="masthead-content">
         <div class="container">
-            <h1 class="masthead-heading mb-0">Previous results</h1>
+            <h1 class="masthead-heading mb-0">Result</h1>
             <div class="text-center">
-                {% for img in imgs %}
-                <img src="{% static img %}" alt="Chords" class="rounded img-fluid mx-auto mt-3" style="height:auto;width:65%;">
-                {% endfor %}
+                <img src="{% static img %}" alt="Chords" class="rounded img-fluid mx-auto" style="height:auto;width:65%;">
             </div>
         </div>
     </div>

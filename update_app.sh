@@ -7,7 +7,8 @@ docker rm chord-recognition
 `aws ecr get-login --no-include-email`
 docker pull ${ECR_REPOSITORY}:${TAG}
 docker run --net bridge -m 0b -p 5000:8000 \
-        -v /chord-recognition/db:/app/src/db \
+        -v /chord-recognition/db:/app/db \
         -v /var/log/chord-recognition:/var/log/chord-recognition \
         -e BUCKET=chord-recognition-bucket \
+        -e DEBUG=False \
         -d --name chord-recognition ${ECR_REPOSITORY}:${TAG} uwsgi

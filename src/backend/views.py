@@ -15,14 +15,14 @@ class Home(View):
 
     def get(self, request):
         form = UploadFileForm()
-        return render(request, 'templates/home/index.html', {'form': form})
+        return render(request, 'home.html', {'form': form})
 
     def post(self, request):
         form = UploadFileForm(request.POST, request.FILES)
         if form.is_valid():
             new_pcp = pcpcontroller.extract_chords_from_audiofile(request.FILES['file'])
             return redirect('view_pcp', path=new_pcp.path)
-        return render(request, 'templates/home/index.html', {'form': form})
+        return render(request, 'home.html', {'form': form})
 
 
 class ViewPCP(View):
@@ -30,7 +30,7 @@ class ViewPCP(View):
     def get(self, request, path):
         pcp = get_object_or_404(models.PCPFile, path=path)
         path = os.path.join(PCP_PARTAL_PATH, pcp.path)
-        return render(request, 'templates/home/view_pcp.html', {'img': path})
+        return render(request, 'view_pcp.html', {'img': path})
 
 
 class ViewPreviousResults(View):
@@ -38,4 +38,4 @@ class ViewPreviousResults(View):
     def get(self, request):
         pcps = models.PCPFile.objects.all().values_list('path', flat=True)
         paths = [os.path.join(PCP_PARTAL_PATH, p) for p in pcps]
-        return render(request, 'templates/home/view_pcps.html', {'imgs': paths})
+        return render(request, 'view_pcps.html', {'imgs': paths})
