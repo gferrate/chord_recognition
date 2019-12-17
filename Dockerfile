@@ -36,7 +36,7 @@ COPY ./src/ .
 RUN mkdir /var/log/chord-recognition/
 RUN touch /var/log/chord-recognition/uwsgi.log
 
-#RUN python3 manage.py collectstatic --noinput
+RUN python3 manage.py collectstatic --noinput
 
 RUN mkdir /conf
 COPY ./conf/uwsgi.ini /conf/uwsgi.ini

@@ -8,253 +8,234 @@ from skimage.feature import peak_local_max
 from numpy import fft
 import matplotlib.collections as collections
 import librosa
+from backend.controllers.ground_truths import get_ground_truth
 
 from backend import models
 from chord_recognition.settings import PCP_IMAGES_ROOT
 
+class FileReader:
 
-song_1_ground_truth = [
-    ('La# Maj', 0, 2),
-    ('Sol Maj', 2, 4),
-    ('Re# Maj', 4, 8),
-    ('Do Maj', 8, 10),
-    ('La Maj', 10, 12),
-    ('Mi Maj', 12, 14),
-    ('La# Maj', 16, 18),
-    ('Sol Maj', 18, 20),
-    ('Re# Maj', 20, 24),
-    ('Do Maj', 24, 26),
-    ('La Maj', 26, 28),
-    ('Mi Maj', 28, 30)
-]
+    def read_data(self, filename):
+
+        fs, data = wavfile.read(filename)
+        data = data[:, 0] # Left channel
+        #data = (data[:, 0] + data[:, 1]) / 2
+        return data, fs
 
 
 class PCPExtractor:
 
-    def __init__(self, file, window_size=1024*8, delay=0,
-                 plot_results=False, window_function_name='cosine'):
-        self.window_size = window_size
-        self.window_function_name = window_function_name
-        self.reduced_window = int(self.window_size / 2)
-        self.delay = delay
-        self.fref = 261.63
-        self.fs = None
-        self.data = None
-        self.plot_results = plot_results
-        self.file = file
-        self.CHORDS = {
-            'Do Maj': ['do', 'mi', 'sol'],
-            'Do # Maj': ['do#', 'mi#', 'sol#'],
-            'Re Maj': ['re', 'fa#', 'la'],
-            'Mib Maj': ['mib', 'sol', 'sib'],
-            'Mi Maj': ['mi', 'sol#', 'si'],
-            'Fa Maj': ['fa', 'la', 'do'],
-            'Fa# Maj': ['fa#', 'la#', 'do#'],
-            'Sol Maj': ['sol', 'si', 're'],
-            'Lab Maj': ['lab', 'do', 'mib'],
-            'La Maj': ['la', 'do#', 'mi'],
-            'Sib Maj': ['sib', 're', 'fa'],
-            'Si Maj': ['si', 're#', 'fa#'],
-            'Do Min': ['do', 'mib', 'sol'],
-            'Do# Min': ['do#', 'mi', 'sol#'],
-            'Re Min': ['re', 'fa', 'la'],
-            'Mib Min': ['mib', 'solb', 'sib'],
-            'Mi Min': ['mi', 'sol', 'si'],
-            'Fa Min': ['fa', 'lab', 'do'],
-            'Fa# Min': ['fa#', 'la', 'do#'],
-            'Sol Min': ['sol', 'sib', 're'],
-            'Lab Min': ['lab', 'b', 'mib'],
-            'La Min': ['la', 'do', 'mi'],
-            'Sib Min': ['sib', 'reb', 'fa'],
-            'Si Min': ['si', 're', 'fa#']
-        }
+    def __init__(self, window_size, fs, fref=261.63, min_dist_maxima_spectrum=5, min_freq_threshold=100):
+        self.window_size=window_size
+        self.fs=fs
+        self.fref=fref
+        self.min_dist_maxima_spectrum = min_dist_maxima_spectrum
+        self.min_freq_threshold = min_freq_threshold
+        self.NOTES = [
+            'do',     'do#',    're',     're#',    'mi',     'fa',
+            'fa#',    'sol',    'sol#', 'la',     'la#',    'si'
+        ]
 
-    def get_tempo(self):
-        self.read_file()
-        y, sr = librosa.load(self.file)
-        tempo, beats = librosa.beat.beat_track(y=y, sr=sr)
-        tempo = tempo or 20
-        return int((60/tempo)*self.fs)
+    def compute_fft(self, signal):
+        spectrum = abs(fft.fft(signal))
+        return spectrum
 
-    def apply_delay(self, delay, window_size):
-        self.delay = delay
-        self.window_size = window_size
-
-    def read_file(self):
-        """Sets self.fs and self.data attributes"""
-        self.fs, self.data = wavfile.read(self.file)
-        self.data = (self.data[:, 0] + self.data[:, 1]) / 2
-
-    def enwindow_data(self):
-        """Sets the window_data attribute"""
-
-        windowed_data = self.data[self.delay:self.delay+self.window_size]
-
-        if self.window_function_name == 'cosine':
-            window_function = signal.windows.cosine(self.window_size)
-        elif self.window_function_name == 'hamming':
-            window_function = signal.hamming(self.window_size)
-        else:
-            # TODO: try with other functions
-            raise Exception('To be implemented')
-        self.windowed_data = windowed_data * window_function
-        if self.plot_results:
-            self.plot_data()
-
-    def plot_data(self):
-        fig, ax = plot.subplots()
-        ax.plot(range(int(npy.size(self.data))), self.data)
-
-        fig, ax = plot.subplots()
-        ax.plot(range(self.window_size), self.windowed_data)
-
-    def compute_fft(self):
-        self.spectrum = abs(fft.fft(self.windowed_data))
-        if self.plot_results:
-            self.plot_fft()
-
-    def plot_fft(self):
-        fig, ax = plot.subplots()
-        ax.plot(range(self.reduced_window), self.spectrum[0:self.reduced_window])
-
-    def filter_fft(self):
-        indexes = peak_local_max(self.spectrum, min_distance=5)
-        filtered_spectrum = npy.zeros(len(self.spectrum))
+    def filter_fft(self, spectrum):
+        indexes = peak_local_max(spectrum, min_distance=self.min_dist_maxima_spectrum)
+        filtered_spectrum = npy.zeros(len(spectrum))
         for i in indexes:
-            filtered_spectrum[i] = self.spectrum[i]
-        self.spectrum = filtered_spectrum
-        if self.plot_results:
-            self.plot_filtered_fft()
+            real_f_hz = self.fs * i / self.window_size
+            if real_f_hz > self.min_freq_threshold:
+                filtered_spectrum[i] = spectrum[i]
+        return filtered_spectrum
 
-    def plot_filtered_fft(self):
-        fig, ax = plot.subplots()
-        ax.plot(
-            range(self.reduced_window), self.spectrum[0:self.reduced_window]
-        )
-
-    def calculate_PCP(self, normalize_values=True):
-        mapping = npy.zeros(self.reduced_window).astype(int)
+    def calculate_PCP(self, filtered_spectrum, normalize_values=True):
+        mapping = npy.zeros(int(self.window_size/2)).astype(int)
         mapping[0] = -1
         PCP = npy.zeros(12)
 
-        # TODO: AQUI PASSA ALGO RARO, mapping[0] mai es crida per tant
-        # lo del -1 es com si no hi sigues
-        for x in range(1, self.reduced_window):
+        for x in range(1, int(self.window_size/2)):
             real_f_hz = self.fs * x / self.window_size
             mapping[x] = int(
-                npy.mod(round(12 * npy.log2(real_f_hz / self.fref)), 12)
+                    npy.mod(round(12 * npy.log2(real_f_hz / self.fref)), 12)
             )
-            PCP[mapping[x]] += npy.square(self.spectrum[x])
+            PCP[mapping[x]] += npy.square(filtered_spectrum[x])
 
         if normalize_values:
             PCP = PCP / max(PCP)
 
-        # Convert to dict
+        PCP = dict(zip(self.NOTES, PCP))
+        return PCP
+
+    def get_PCP(self, windowed_data):
+        pcp = self.calculate_PCP(self.filter_fft(self.compute_fft(windowed_data)))
+        return pcp
+
+
+class ChordMatcher:
+
+    def __init__(self, threshold=1.8, method = 'threshold'):
+        self.threshold = threshold
+        self.method = method
         notes = [
-            'do', 'do#', 're', 're#', 'mi', 'fa',
-            'fa#', 'sol', 'sol#', 'la', 'la#', 'si'
+            'do',     'do#',    're',        're#',     'mi',     'fa',
+            'fa#',    'sol',    'sol#',    'la',        'la#',    'si'
         ]
-        self.PCP = dict(zip(notes, PCP))
-        if self.plot_results:
-            self.plot_PCP()
+        self.CHORDS = {
+            'Do Maj':     dict(zip(notes, [1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0])),
+            'Do# Maj':    dict(zip(notes, [0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0])),
+            'Re Maj':     dict(zip(notes, [0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0])),
+            'Re# Maj':    dict(zip(notes, [0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0])),
+            'Mi Maj':     dict(zip(notes, [0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1])),
+            'Fa Maj':     dict(zip(notes, [1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0])),
+            'Fa# Maj':    dict(zip(notes, [0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0])),
+            'Sol Maj':    dict(zip(notes, [0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1])),
+            'Sol# Maj': dict(zip(notes, [1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0])),
+            'La Maj':     dict(zip(notes, [0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0])),
+            'La# Maj':    dict(zip(notes, [0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0])),
+            'Si Maj':     dict(zip(notes, [0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1])),
 
-    def plot_PCP(self):
-        fig, ax = plot.subplots()
-        plot.bar(self.PCP.keys(), self.PCP.values())
+            'Do Min':     dict(zip(notes, [1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0])),
+            'Do# Min':    dict(zip(notes, [0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0])),
+            'Re Min':     dict(zip(notes, [0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0])),
+            'Re# Min':    dict(zip(notes, [0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0])),
+            'Mi Min':     dict(zip(notes, [0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1])),
+            'Fa Min':     dict(zip(notes, [1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0])),
+            'Fa# Min':    dict(zip(notes, [0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0])),
+            'Sol Min':    dict(zip(notes, [0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0])),
+            'Sol# Min': dict(zip(notes, [0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1])),
+            'La Min':     dict(zip(notes, [1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0])),
+            'La# Min':    dict(zip(notes, [0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0])),
+            'Si Min':     dict(zip(notes, [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1])),
+        }
 
-    def extract_chord(self, try_relaxed=True):
-        """Extracts the chord from the PCP.
+    def compute_correlation(self, PCP):
+        correlation = {}
+        for chord, pcp_dict in self.CHORDS.items():
+            correlation[chord] = 0
+            for note, pcp_value in PCP.items():
+                correlation[chord] += pcp_value * pcp_dict[note]
 
-        If try_relaxed=True, it will pick the closest chord if not found
-        """
+        return correlation
 
-        def get_chord_name(notes_found):
-            matching_chord = None
-            for chord_name, chord_notes in self.CHORDS.items():
-                if sorted(chord_notes) == sorted(notes_found):
-                    # If found, returns the chord
-                    return chord_name
-            return None
-
-        sorted_PCP_dict = sorted(
-            self.PCP.items(), key=lambda kv: kv[1], reverse=True
+    def find_chord(self, correlation):
+        sorted_correlation = sorted(
+            correlation.items(), key=lambda kv: kv[1], reverse=True
         )
-        sorted_notes = [n[0] for n in sorted_PCP_dict]
-        matching_chord = get_chord_name(sorted_notes[:3])
-        if try_relaxed and not matching_chord:
-            # Un approach mes correcte potser es baixant un semito en alguna nota, etc
-            # Try picking the 1st, 2nd and 4th notes of the PCP
-            #            print('Not found, trying with 4th PCP note')
-            notes_found = sorted_notes[:2] + sorted_notes[3:4]
-            matching_chord = get_chord_name(notes_found)
-        self.notes_found = sorted_notes[:3]
-        self.matching_chord = matching_chord
-        if self.plot_results:
-            self.print_chord_results()
+        chord = None
+        if self.method == 'threshold':
+            THRESHOLD = self.threshold
+            max_value = sorted_correlation[0][1]
+            if max_value > THRESHOLD:
+                chord = sorted_correlation[0][0]
+        elif self.method == 'difference':
+            THRESHOLD = self.threshold
+            ratio = sorted_correlation[0][1]/sorted_correlation[1][1]
+            if ratio > THRESHOLD:
+                chord = sorted_correlation[0][0]
 
-    def print_chord_results(self):
-        print('\n' * 2)
-        print('-' * 30)
-        if self.matching_chord:
-            print('The chord found is ', matching_chord)
+        return chord, max_value
+
+    def get_chord(self, PCP, silence):
+        if silence:
+            return None
         else:
-            print('No matching chord found')
-            print('Notes found: ', ', '.join(self.notes_found))
-        print('-' * 30)
-        print('\n' * 2)
-
-    def save_plot_wave_with_results(self, results):
-        fig, ax = plot.subplots(dpi=200)
-        ax.set_title('Data with found chords')
-        ax.plot(range(int(npy.size(self.data))), self.data, linewidth=1)
-
-        y_positions = [max(self.data)/2, min(self.data)/2]
-        current_y_idx = 0
-        x_offset = 0
-        for second, chord, is_ok in results:
-            coord = second * self.fs
-            if is_ok == True:
-                plot.axvline(x=coord, color='g')
-                bbox={'facecolor': 'green', 'alpha': 0.5, 'pad': 1}
-                ax.text(coord + x_offset, 0, chord,
-                        rotation='vertical', bbox=bbox, fontsize=7)
-            elif is_ok == False:
-                plot.axvline(x=coord, color='r')
-                bbox={'facecolor': 'red', 'alpha': 0.5, 'pad': 1}
-                ax.text(coord + x_offset, 0, chord,
-                        rotation='vertical', bbox=bbox, fontsize=7)
-            elif is_ok == 'no_ground_truth':
-                plot.axvline(x=coord, color='grey')
-                bbox={'facecolor': 'grey', 'alpha': 0.5, 'pad': 1}
-                ax.text(coord + x_offset, 0, chord,
-                        rotation='vertical', bbox=bbox, fontsize=7)
-
-            current_y_idx = (current_y_idx + 1) % 2
-        new_pcp = models.PCPFile.objects.create()
-        fig.savefig(os.path.join(PCP_IMAGES_ROOT,new_pcp.path), dpi=fig.dpi)
-        return new_pcp
+            chord, max_value = self.find_chord(self.compute_correlation(PCP))
+            return chord
 
 
-    def get_single_chord(self, delay=None, window_size=None):
-        if self.data is None or not self.data.any():
-            self.read_file()
-        self.delay = delay if delay else self.delay
-        self.window_size = window_size if window_size else self.window_size
-        self.enwindow_data()
-        self.compute_fft()
-        self.filter_fft()
-        self.calculate_PCP()
-        self.extract_chord()
-        return self.matching_chord
+def enwindow_data(data, window_size, delay, window_function_name='cosine'):
+        """Sets the window_data attribute"""
+
+        windowed_data = data[delay:delay+window_size]
+
+        if window_function_name == 'cosine':
+                window_function = signal.windows.cosine(window_size)
+        elif window_function_name == 'hamming':
+                window_function = signal.hamming(window_size)
+        else:
+                # TODO: try with other functions
+                raise Exception('To be implemented')
+
+        return windowed_data * window_function
 
 
-def extract_chords_from_audiofile(file, ground_truth=None):
-    pcp_extractor = PCPExtractor(file=file, window_size=1024*5)
-    pcp_extractor.read_file()
-    delta = pcp_extractor.get_tempo()
+#Define a function for merging chords if needed
+#Currently done explicitly in run code, so not needed
+
+def get_power(windowed_data, fs):
+    # f, Pxx_spec = signal.periodogram(windowed_data, fs, 'flattop', scaling='spectrum')
+    # power = npy.sqrt(Pxx_spec.max())
+    power = 0
+    for i in range(0, len(windowed_data)):
+        power += windowed_data[i]**2
+    power = power / len(windowed_data)
+    return power
+
+
+def final_plot(data, fs, results):
+    fig, ax = plot.subplots(dpi=150)
+    ax.set_title('Data with found chords')
+    ax.plot(range(int(npy.size(data))), data)
+
+    y_positions = [max(data)/2, min(data)/2]
+    current_y_idx = 0
+    x_offset = 0
+    for second, chord, is_ok in results:
+        coord = second * fs
+        if is_ok == True:
+            plot.axvline(x=coord, color='g')
+            bbox = {'facecolor': 'green', 'alpha': 0.5, 'pad': 1}
+            ax.text(coord + x_offset, 0, chord,
+                            rotation='vertical', bbox=bbox, fontsize=7)
+        elif is_ok == False:
+            plot.axvline(x=coord, color='r')
+            bbox = {'facecolor': 'red', 'alpha': 0.5, 'pad': 1}
+            ax.text(coord + x_offset, 0, chord,
+                            rotation='vertical', bbox=bbox, fontsize=7)
+        elif is_ok == 'no_ground_truth':
+            plot.axvline(x=coord, color='grey')
+            bbox={'facecolor': 'grey', 'alpha': 0.5, 'pad': 1}
+            ax.text(coord + x_offset, 0, chord,
+                    rotation='vertical', bbox=bbox, fontsize=7)
+        current_y_idx = (current_y_idx + 1) % 2
+    new_pcp = models.PCPFile.objects.create()
+    fig.savefig(os.path.join(PCP_IMAGES_ROOT,new_pcp.path), dpi=fig.dpi)
+    return new_pcp
+
+
+def extract_chords_from_audiofile(file):
+    filename = file.name
+    window_size = 1024*8
+    MARGIN = 0.5      #seconds
+    file_reader = FileReader()
+    data, fs = file_reader.read_data(file)
+    ground_truth = get_ground_truth(filename)
+
+    pcp_extractor = PCPExtractor(
+        window_size=window_size, fs=fs, min_freq_threshold=250
+    )
+
+    chord_matcher = ChordMatcher(threshold=2.2)
+
     chords = []
-    for delay in range(0, pcp_extractor.data.size-delta, delta):
-        chord = pcp_extractor.get_single_chord(delay, delta)
+    results = []
+    silence=True
+    avg_power=get_power(data, fs)
+    print('avg power: '+ str(avg_power))
+
+
+    for delay in range(0, data.size-window_size, int(window_size/2)):
+        windowed_data=enwindow_data(data, window_size, delay=delay)
+        power = get_power(windowed_data, fs)
+        if (power>0.5*avg_power):
+            silence=False
+            PCP=pcp_extractor.get_PCP(windowed_data)
+        else:
+            silence=True
+            PCP=None
+        chord =chord_matcher.get_chord(PCP,silence)
+
         if chord:
             try:
                 last_chord = chords[-1][1]
@@ -262,24 +243,36 @@ def extract_chords_from_audiofile(file, ground_truth=None):
                     continue
             except IndexError:
                 pass
-            second = delay / pcp_extractor.fs
+            second = delay / fs
             chords.append((round(second, 1), chord))
+
     if ground_truth:
-        results = []
-        MARGIN = 0.5
+        true_positives = 0
+        false_negatives = 0
+        false_positives = 0
         for second, chord in chords:
             is_ok = False
             for good_chord, sec_from, sec_to in ground_truth:
                 if ((second >= (sec_from - MARGIN)) and
-                    (second <= (sec_to + MARGIN)) and
-                        (chord == good_chord)):
+                (second <= (sec_to + MARGIN)) and
+                (chord == good_chord)):
                     is_ok = True
                     break
             if is_ok:
                 results.append((second, chord, True))
+                true_positives += 1
+                print('\t'.join([str(second), chord, 'OK']))
             else:
                 results.append((second, chord, False))
+                false_positives += 1
+                print('\t'.join([str(second), chord, 'NO OK']))
+
+        false_negatives = len(ground_truth) - true_positives
+        recall = true_positives / len(ground_truth)
+        precision = true_positives / (true_positives + false_positives)
+        print(f'Precision: {precision}')
+        print(f'Recall: {recall}')
     else:
         results = [c + ('no_ground_truth',) for c in chords]
 
-    return pcp_extractor.save_plot_wave_with_results(results)
+    return final_plot(data, fs, results)

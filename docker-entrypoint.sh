@@ -1,6 +1,6 @@
 #!/bin/sh
 set -e
-python3 manage.py collectstatic --noinput
+#python3 manage.py collectstatic --noinput
 
 if [ "$1" = 'uwsgi' ]; then
   #/usr/bin/python3 /app/src/manage.py migrate

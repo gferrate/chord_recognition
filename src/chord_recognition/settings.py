@@ -13,7 +13,7 @@ SECRET_KEY = '&k5xcjrq)19l+m_2@h-7kd@-2ay9-s9umnazyxab!3)8gw$&oh'
 
 STATIC_URL = '/static/'
 #STATIC_URL = os.path.join(BASE_DIR, 'static/')
-#STATIC_ROOT = os.path.join(BASE_DIR, "static")
+STATIC_ROOT = os.path.join(BASE_DIR, "/assets/static/")
 if os.environ.get('DEBUG') == 'False':
     # WITH DOCKER
     DEBUG = False
@@ -22,6 +22,7 @@ else:
     # WITHOUT DOCKER
     DEBUG = True
     STATICFILES_DIRS = [os.path.join(BASE_DIR, "static")]
+
 
 ALLOWED_HOSTS = [
     'ec2-54-226-226-35.compute-1.amazonaws.com',
