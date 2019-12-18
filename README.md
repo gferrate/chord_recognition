@@ -1,6 +1,6 @@
 # chord_recognition
 
-## Live example [here](https://youtu.be/pJPrGv0MQhM)
+## Live example [here](https://www.youtube.com/watch?v=3Lcbcv98Nm8)
 
 ## To deploy the application
 First, locally, run the command:
