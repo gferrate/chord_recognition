@@ -1,5 +1,7 @@
 # chord_recognition
 
+## Live example [here](https://youtu.be/pJPrGv0MQhM)
+
 ## To deploy the application
 First, locally, run the command:
 * `make build tag=<tag>`: This will build the docker and upload it to the ECR in amazon
