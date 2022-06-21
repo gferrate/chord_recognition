@@ -16,7 +16,7 @@ librosa==0.7.1
 llvmlite==0.30.0
 matplotlib==3.0.3
 numba==0.46.0
-numpy==1.17.4
+numpy==1.22.0
 parso==0.5.1
 pexpect==4.7.0
 pickleshare==0.7.5
